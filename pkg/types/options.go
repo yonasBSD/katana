@@ -174,6 +174,9 @@ type Options struct {
 	DisableUpdateCheck bool
 	//IgnoreQueryParams ignore crawling same path with different query-param values
 	IgnoreQueryParams bool
+	// FilterSimilar filters crawling of similar looking URLs
+	// by normalizing variable path segments (IDs, UUIDs, hashes, dates)
+	FilterSimilar bool
 	// Debug
 	Debug bool
 	// TlsImpersonate enables experimental tls ClientHello randomization for standard crawler

@@ -138,6 +138,7 @@ CONFIGURATION:
    -flc, -field-config string    path to custom field configuration file
    -s, -strategy string          Visit strategy (depth-first, breadth-first) (default "depth-first")
    -iqp, -ignore-query-params    Ignore crawling same path with different query-param values
+   -fsu, -filter-similar         filter crawling of similar looking URLs (e.g., /users/123 and /users/456)
    -tlsi, -tls-impersonate       enable experimental client hello (ja3) tls randomization
    -dr, -disable-redirects       disable following redirects (default false)
 
