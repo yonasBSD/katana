@@ -37,7 +37,7 @@ func New(options *types.CrawlerOptions) (*Headless, error) {
 		deduplicator: mapsutil.NewSyncLockMap[string, struct{}](),
 	}
 	if options.Options.FilterSimilar {
-		headless.pathTrie = utils.NewPathTrie()
+		headless.pathTrie = utils.NewPathTrie(options.Options.FilterSimilarThreshold)
 	}
 
 	// Show crawl debugger if verbose is enabled

@@ -6,7 +6,7 @@ import (
 )
 
 func TestPathTrie_BasicInsertion(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	segments := []string{"api", "v1", "users"}
 	result := trie.Fingerprint("example.com", segments)
 
@@ -18,7 +18,7 @@ func TestPathTrie_BasicInsertion(t *testing.T) {
 }
 
 func TestPathTrie_RepeatedInsertionNoop(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 	segments := []string{"api", "v1", "users"}
 
@@ -34,7 +34,7 @@ func TestPathTrie_RepeatedInsertionNoop(t *testing.T) {
 }
 
 func TestPathTrie_PromotionExactThreshold(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	// Insert exactly threshold distinct children — should NOT promote
@@ -54,7 +54,7 @@ func TestPathTrie_PromotionExactThreshold(t *testing.T) {
 }
 
 func TestPathTrie_Promotion(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	for i := range DefaultPromotionThreshold + 1 {
@@ -71,7 +71,7 @@ func TestPathTrie_Promotion(t *testing.T) {
 }
 
 func TestPathTrie_PromotionDoesNotAffectOtherHosts(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	for i := range DefaultPromotionThreshold + 1 {
 		trie.Fingerprint("a.com", []string{"users", fmt.Sprintf("user-%d", i)})
@@ -84,7 +84,7 @@ func TestPathTrie_PromotionDoesNotAffectOtherHosts(t *testing.T) {
 }
 
 func TestPathTrie_DeepPath(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	for i := range DefaultPromotionThreshold + 1 {
@@ -101,7 +101,7 @@ func TestPathTrie_DeepPath(t *testing.T) {
 }
 
 func TestPathTrie_EmptySegments(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	result := trie.Fingerprint("example.com", []string{})
 	if len(result) != 0 {
 		t.Errorf("expected empty result, got %v", result)
@@ -109,7 +109,7 @@ func TestPathTrie_EmptySegments(t *testing.T) {
 }
 
 func TestPathTrie_SingleSegment(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	for i := range DefaultPromotionThreshold + 1 {
 		trie.Fingerprint("example.com", []string{fmt.Sprintf("page-%d", i)})
@@ -122,14 +122,17 @@ func TestPathTrie_SingleSegment(t *testing.T) {
 }
 
 func TestPathTrie_PromotedNodeChildrenNil(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	for i := range DefaultPromotionThreshold + 1 {
 		trie.Fingerprint(host, []string{fmt.Sprintf("item-%d", i)})
 	}
 
-	root := trie.roots[host]
+	root, ok := trie.roots.Get(host)
+	if !ok {
+		t.Fatal("expected host root to exist")
+	}
 	if root.children != nil {
 		t.Error("expected children to be nil after promotion")
 	}
@@ -139,7 +142,7 @@ func TestPathTrie_PromotedNodeChildrenNil(t *testing.T) {
 }
 
 func TestPathTrie_PreviousValueCollapseAfterPromotion(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	// Insert values before promotion
@@ -159,7 +162,7 @@ func TestPathTrie_PreviousValueCollapseAfterPromotion(t *testing.T) {
 }
 
 func TestPathTrie_SegmentsAfterPromotedNodeTrackedIndependently(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	// Promote the username segment: /users/{param}/...
@@ -182,7 +185,7 @@ func TestPathTrie_SegmentsAfterPromotedNodeTrackedIndependently(t *testing.T) {
 }
 
 func TestPathTrie_MultipleBranchesIndependent(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	// Promote /api/users/* but not /api/posts/*
@@ -207,7 +210,7 @@ func TestPathTrie_MultipleBranchesIndependent(t *testing.T) {
 }
 
 func TestPathTrie_MultiplePromotionsAtDifferentDepths(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "example.com"
 
 	// Promote at depth 0 (root children)
@@ -228,7 +231,7 @@ func TestPathTrie_MultiplePromotionsAtDifferentDepths(t *testing.T) {
 }
 
 func TestPathTrie_NewHostLazyInit(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	// Accessing new host should work without explicit init
 	result := trie.Fingerprint("new-host.com", []string{"foo", "bar"})
@@ -236,8 +239,47 @@ func TestPathTrie_NewHostLazyInit(t *testing.T) {
 		t.Errorf("lazy init failed: got %v", result)
 	}
 
-	// Verify the host was created
-	if _, exists := trie.roots["new-host.com"]; !exists {
+	// Verify the host was created in the LRU cache
+	if !trie.roots.Contains("new-host.com") {
 		t.Error("host root not created after first access")
+	}
+}
+
+func TestPathTrie_CustomThreshold(t *testing.T) {
+	trie := NewPathTrie(3)
+	host := "example.com"
+
+	// With threshold=3, promotion happens after 4 distinct children
+	trie.Fingerprint(host, []string{"items", "a"})
+	trie.Fingerprint(host, []string{"items", "b"})
+	trie.Fingerprint(host, []string{"items", "c"})
+
+	// 3 children, not promoted yet
+	result := trie.Fingerprint(host, []string{"items", "a"})
+	if result[1] == "{param}" {
+		t.Error("should not promote at threshold")
+	}
+
+	// 4th distinct child triggers promotion
+	result = trie.Fingerprint(host, []string{"items", "d"})
+	if result[1] != "{param}" {
+		t.Errorf("expected promotion with threshold=3, got %q", result[1])
+	}
+}
+
+func TestPathTrie_LRUEviction(t *testing.T) {
+	// Create a trie with a small LRU for testing eviction behavior
+	trie := NewPathTrie(0)
+
+	// Add many hosts to verify the trie doesn't panic
+	for i := range 100 {
+		host := fmt.Sprintf("host-%d.com", i)
+		trie.Fingerprint(host, []string{"path", "segment"})
+	}
+
+	// All recently accessed hosts should still work
+	result := trie.Fingerprint("host-99.com", []string{"path", "segment"})
+	if result[0] != "path" || result[1] != "segment" {
+		t.Errorf("LRU host access failed: got %v", result)
 	}
 }

@@ -337,7 +337,7 @@ func TestFingerprintURL_DifferentURLsStayDistinct(t *testing.T) {
 }
 
 func TestFingerprintURL_WithTrie_PromotionLifecycle(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 	host := "https://example.com"
 
 	// Before promotion: each slug is kept as-is
@@ -367,7 +367,7 @@ func TestFingerprintURL_WithTrie_PromotionLifecycle(t *testing.T) {
 }
 
 func TestFingerprintURL_WithTrie_RegexSegmentsDontInflateTrie(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	// Feed many numeric IDs — regex catches them before trie sees them
 	for i := range 100 {
@@ -383,7 +383,7 @@ func TestFingerprintURL_WithTrie_RegexSegmentsDontInflateTrie(t *testing.T) {
 }
 
 func TestFingerprintURL_WithTrie_MultipleHosts(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	// Promote /users/* on host A
 	for i := range DefaultPromotionThreshold + 1 {
@@ -406,7 +406,7 @@ func TestFingerprintURL_WithTrie_MultipleHosts(t *testing.T) {
 }
 
 func TestFingerprintURL_WithTrie_DeepPromotion(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	// Promote only the username segment, not others
 	for i := range DefaultPromotionThreshold + 1 {
@@ -427,7 +427,7 @@ func TestFingerprintURL_WithTrie_DeepPromotion(t *testing.T) {
 }
 
 func TestFingerprintURL_WithTrie_CombinedRegexAndTrie(t *testing.T) {
-	trie := NewPathTrie()
+	trie := NewPathTrie(0)
 
 	// Promote blog slugs
 	for i := range DefaultPromotionThreshold + 1 {
@@ -475,7 +475,7 @@ func TestFingerprintURL_NilTrieSameAsRegexOnly(t *testing.T) {
 	}
 	for _, u := range urls {
 		withNil := FingerprintURL(u, nil)
-		withEmpty := FingerprintURL(u, NewPathTrie())
+		withEmpty := FingerprintURL(u, NewPathTrie(0))
 		if withNil != withEmpty {
 			t.Errorf("nil trie vs empty trie differ for %q:\n  nil   = %q\n  empty = %q", u, withNil, withEmpty)
 		}

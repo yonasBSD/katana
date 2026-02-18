@@ -60,7 +60,7 @@ func NewShared(options *types.CrawlerOptions) (*Shared, error) {
 	shared.Jar = jar
 
 	if options.Options.FilterSimilar {
-		shared.PathTrie = utils.NewPathTrie()
+		shared.PathTrie = utils.NewPathTrie(options.Options.FilterSimilarThreshold)
 	}
 
 	return shared, nil
