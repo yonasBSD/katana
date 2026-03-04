@@ -3,9 +3,49 @@ package captcha
 import (
 	"testing"
 
+	ditcaptcha "github.com/happyhackingspace/dit/captcha"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDetectCaptchaWithDit(t *testing.T) {
+	tests := []struct {
+		name string
+		html string
+		want ditcaptcha.CaptchaType
+	}{
+		{
+			name: "recaptcha",
+			html: `<html><body><div class="g-recaptcha" data-sitekey="6Lc"></div>
+				<script src="https://www.google.com/recaptcha/api.js"></script></body></html>`,
+			want: ditcaptcha.CaptchaTypeRecaptcha,
+		},
+		{
+			name: "turnstile",
+			html: `<html><body><div class="cf-turnstile" data-sitekey="0x4AAA"></div>
+				<script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script></body></html>`,
+			want: ditcaptcha.CaptchaTypeTurnstile,
+		},
+		{
+			name: "hcaptcha",
+			html: `<html><body><div class="h-captcha" data-sitekey="abc"></div>
+				<script src="https://js.hcaptcha.com/1/api.js"></script></body></html>`,
+			want: ditcaptcha.CaptchaTypeHCaptcha,
+		},
+		{
+			name: "no captcha",
+			html: `<html><body><h1>Hello</h1></body></html>`,
+			want: ditcaptcha.CaptchaTypeNone,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ditcaptcha.DetectCaptchaInHTML(tt.html)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
 
 func TestIdentify(t *testing.T) {
 	browser := setupBrowser(t)

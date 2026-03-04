@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-rod/rod"
+	ditcaptcha "github.com/happyhackingspace/dit/captcha"
 	"github.com/projectdiscovery/gologger"
 	captchajs "github.com/projectdiscovery/katana/pkg/engine/headless/captcha/js"
 )
@@ -25,6 +26,10 @@ func NewHandler(solverProvider, apiKey string) (*Handler, error) {
 }
 
 func (h *Handler) HandleIfCaptcha(ctx context.Context, page *rod.Page, pageHTML string) (bool, error) {
+	if ct := ditcaptcha.DetectCaptchaInHTML(pageHTML); ct == ditcaptcha.CaptchaTypeNone {
+		return false, nil
+	}
+
 	info, err := Identify(page)
 	if err != nil {
 		gologger.Debug().Msgf("captcha identification failed: %s", err)
