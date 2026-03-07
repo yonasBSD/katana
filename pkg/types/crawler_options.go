@@ -14,6 +14,7 @@ import (
 	"github.com/projectdiscovery/katana/pkg/utils/filters"
 	"github.com/projectdiscovery/katana/pkg/utils/scope"
 	"github.com/projectdiscovery/ratelimit"
+	"github.com/happyhackingspace/dit"
 	"github.com/projectdiscovery/utils/errkit"
 	urlutil "github.com/projectdiscovery/utils/url"
 	wappalyzer "github.com/projectdiscovery/wappalyzergo"
@@ -39,6 +40,8 @@ type CrawlerOptions struct {
 	Dialer *fastdialer.Dialer
 	// Wappalyzer instance for technologies detection
 	Wappalyzer *wappalyzer.Wappalyze
+	// DitClassifier instance for knowledge base classification
+	DitClassifier *dit.Classifier
 
 	// Optional structured logger for headless crawler
 	Logger *slog.Logger
@@ -102,6 +105,7 @@ func NewCrawlerOptions(options *Options) (*CrawlerOptions, error) {
 		OutputMatchCondition:  options.OutputMatchCondition,
 		OutputFilterCondition: options.OutputFilterCondition,
 		ExcludeOutputFields:   options.ExcludeOutputFields,
+		FilterPageType:        options.FilterPageType,
 	}
 
 	for _, mr := range options.OutputMatchRegex {
@@ -148,6 +152,17 @@ func NewCrawlerOptions(options *Options) (*CrawlerOptions, error) {
 		crawlerOptions.Wappalyzer = wappalyze
 	}
 
+	if len(options.FilterPageType) > 0 {
+		options.KnowledgeBase = true
+	}
+	if options.KnowledgeBase {
+		classifier, err := dit.New()
+		if err != nil {
+			return nil, errkit.Wrap(err, "could not init dit classifier")
+		}
+		crawlerOptions.DitClassifier = classifier
+	}
+
 	if options.MaxOnclickLinks <= 0 {
 		options.MaxOnclickLinks = 10
 	}
@@ -166,6 +181,24 @@ func (c *CrawlerOptions) ValidatePath(path string) bool {
 		return c.ExtensionsValidator.ValidatePath(path)
 	}
 	return true
+}
+
+// ClassifyPage classifies a page using the dit classifier and returns the knowledge base map.
+func (c *CrawlerOptions) ClassifyPage(body string) map[string]any {
+	if c.DitClassifier == nil {
+		return nil
+	}
+	result, err := c.DitClassifier.ExtractPageType(body)
+	if err != nil {
+		return nil
+	}
+	kb := map[string]any{
+		"PageType": result.Type,
+	}
+	if len(result.Forms) > 0 {
+		kb["Forms"] = result.Forms
+	}
+	return kb
 }
 
 // ValidateScope validates scope for an AbsURL

@@ -1,8 +1,6 @@
 module github.com/projectdiscovery/katana
 
-go 1.24.1
-
-toolchain go1.24.2
+go 1.25.7
 
 require (
 	github.com/BishopFox/jsluice v0.0.0-20240110145140-0ddfab153e06
@@ -10,6 +8,7 @@ require (
 	github.com/adrianbrad/queue v1.3.0
 	github.com/dominikbraun/graph v0.23.0
 	github.com/go-rod/rod v0.116.2
+	github.com/happyhackingspace/dit v0.0.14
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/json-iterator/go v1.1.12
 	github.com/lmittmann/tint v1.0.6
@@ -34,7 +33,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasttemplate v1.2.2
 	go.uber.org/multierr v1.11.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

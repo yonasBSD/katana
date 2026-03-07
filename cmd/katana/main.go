@@ -171,6 +171,7 @@ pipelines offering both headless and non-headless crawling.`)
 		flagSet.BoolVarP(&options.TlsImpersonate, "tls-impersonate", "tlsi", false, "enable experimental client hello (ja3) tls randomization"),
 		flagSet.BoolVarP(&options.DisableRedirects, "disable-redirects", "dr", false, "disable following redirects (default false)"),
 		flagSet.BoolVarP(&options.PathClimb, "path-climb", "pc", false, "enable path climb (auto crawl parent paths)"),
+		flagSet.BoolVarP(&options.KnowledgeBase, "knowledge-base", "kb", false, "enable knowledge base classification"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
@@ -217,6 +218,7 @@ pipelines offering both headless and non-headless crawling.`)
 		flagSet.StringVarP(&options.OutputMatchCondition, "match-condition", "mdc", "", "match response with dsl based condition"),
 		flagSet.StringVarP(&options.OutputFilterCondition, "filter-condition", "fdc", "", "filter response with dsl based condition"),
 		flagSet.BoolVarP(&options.DisableUniqueFilter, "disable-unique-filter", "duf", false, "disable duplicate content filtering"),
+		flagSet.StringSliceVarP(&options.FilterPageType, "filter-page-type", "fpt", nil, "filter response with page type (e.g. error,captcha,parked)", goflags.CommaSeparatedStringSliceOptions),
 	)
 
 	flagSet.CreateGroup("ratelimit", "Rate-Limit",

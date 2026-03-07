@@ -259,14 +259,15 @@ func (s *Shared) NewCrawlSessionWithURL(URL string) (*CrawlSession, error) {
 			technologyKeys = mapsutil.GetKeys(technologies)
 		}
 		navigationResponse := &navigation.Response{
-			Depth:        depth + 1,
-			RootHostname: hostname,
-			Resp:         resp,
-			Body:         string(body),
-			Reader:       reader,
-			Technologies: technologyKeys,
-			StatusCode:   resp.StatusCode,
-			Headers:      utils.FlattenHeaders(resp.Header),
+			Depth:         depth + 1,
+			RootHostname:  hostname,
+			Resp:          resp,
+			Body:          string(body),
+			Reader:        reader,
+			Technologies:  technologyKeys,
+			StatusCode:    resp.StatusCode,
+			Headers:       utils.FlattenHeaders(resp.Header),
+			KnowledgeBase: s.Options.ClassifyPage(string(body)),
 		}
 		navigationRequests := s.Options.Parser.ParseResponse(navigationResponse)
 		s.Enqueue(queue, navigationRequests...)

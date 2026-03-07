@@ -12,22 +12,19 @@ jobs:
     steps:
       - name: "Check out code"
         uses: actions/checkout@v6
-        with: 
+        with:
           fetch-depth: 0
-      
+
       - name: "Set up Go"
-        uses: actions/setup-go@v6
-        with: 
-          go-version: 1.24.x
-          cache: true
-      
+        uses: projectdiscovery/actions/setup/go@v1
+
       - name: "Create release on GitHub"
         uses: goreleaser/goreleaser-action@v7
-        with: 
+        with:
           args: "release -f .goreleaser/mac.yml --clean"
           version: latest
           workdir: .
-        env: 
+        env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
   build-windows:
@@ -35,22 +32,19 @@ jobs:
     steps:
       - name: "Check out code"
         uses: actions/checkout@v6
-        with: 
+        with:
           fetch-depth: 0
-      
+
       - name: "Set up Go"
-        uses: actions/setup-go@v6
-        with: 
-          go-version: 1.24.x
-          cache: true
-      
+        uses: projectdiscovery/actions/setup/go@v1
+
       - name: "Create release on GitHub"
         uses: goreleaser/goreleaser-action@v7
-        with: 
+        with:
           args: "release -f .goreleaser/windows.yml --clean"
           version: latest
           workdir: .
-        env: 
+        env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
   build-linux:
@@ -58,14 +52,11 @@ jobs:
     steps:
       - name: "Check out code"
         uses: actions/checkout@v6
-        with: 
+        with:
           fetch-depth: 0
-      
+
       - name: "Set up Go"
-        uses: actions/setup-go@v6
-        with: 
-          go-version: 1.24.x
-          cache: true
+        uses: projectdiscovery/actions/setup/go@v1
 
       # todo: musl compatible?
       - name: Install Dependences
@@ -73,11 +64,11 @@ jobs:
 
       - name: "Create release on GitHub"
         uses: goreleaser/goreleaser-action@v7
-        with: 
+        with:
           args: "release -f .goreleaser/linux.yml --clean"
           version: latest
           workdir: .
-        env: 
+        env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           SLACK_WEBHOOK: "${{ secrets.RELEASE_SLACK_WEBHOOK }}"
           DISCORD_WEBHOOK_ID: "${{ secrets.DISCORD_WEBHOOK_ID }}"

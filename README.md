@@ -40,7 +40,7 @@
 
 ## Installation
 
-katana requires Go 1.24+ to install successfully. If you encounter any installation issues, we recommend trying with the latest available version of Go, as the minimum required version may have changed. Run the command below or download a pre-compiled binary from the [release page](https://github.com/projectdiscovery/katana/releases).
+katana requires Go 1.25+ to install successfully. If you encounter any installation issues, we recommend trying with the latest available version of Go, as the minimum required version may have changed. Run the command below or download a pre-compiled binary from the [release page](https://github.com/projectdiscovery/katana/releases).
 
 ```console
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
@@ -142,6 +142,7 @@ CONFIGURATION:
    -fst, -filter-similar-threshold int  number of distinct values before a path position is treated as parameter (default 10)
    -tlsi, -tls-impersonate       enable experimental client hello (ja3) tls randomization
    -dr, -disable-redirects       disable following redirects (default false)
+   -kb, -knowledge-base          enable knowledge base classification
 
 DEBUG:
    -health-check, -hc        run diagnostic check up
@@ -180,6 +181,7 @@ FILTER:
    -mdc, -match-condition string          match response with dsl based condition
    -fdc, -filter-condition string         filter response with dsl based condition
    -duf, -disable-unique-filter           disable duplicate content filtering
+   -fpt, -filter-page-type string[]      filter response with page type (e.g. error,captcha,parked)
 
 RATE-LIMIT:
    -c, -concurrency int          number of concurrent fetchers to use (default 10)

@@ -194,6 +194,10 @@ type Options struct {
 	MaxOnclickLinks       int
 	CaptchaSolverProvider string
 	CaptchaSolverAPIKey   string
+	// KnowledgeBase enables knowledge base classification using dit
+	KnowledgeBase bool
+	// FilterPageType filters results by page type
+	FilterPageType goflags.StringSlice
 }
 
 func (options *Options) ParseCustomHeaders() map[string]string {
