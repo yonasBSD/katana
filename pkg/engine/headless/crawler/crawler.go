@@ -16,7 +16,9 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/rod/lib/utils"
 	"github.com/pkg/errors"
+	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/katana/pkg/engine/headless/browser"
+	"github.com/projectdiscovery/katana/pkg/engine/headless/captcha"
 	"github.com/projectdiscovery/katana/pkg/engine/headless/crawler/diagnostics"
 	"github.com/projectdiscovery/katana/pkg/engine/headless/crawler/normalizer"
 	"github.com/projectdiscovery/katana/pkg/engine/headless/crawler/normalizer/simhash"
@@ -56,10 +58,12 @@ type Options struct {
 	EnableDiagnostics bool
 	DiagnosticsDir    string
 
+	Proxy           string
 	Logger          *slog.Logger
 	ScopeValidator  browser.ScopeValidator
 	RequestCallback func(*output.Result)
 	ChromeUser      *user.User
+	CaptchaHandler  *captcha.Handler
 }
 
 var domNormalizer *normalizer.Normalizer
@@ -97,6 +101,7 @@ func New(opts Options) (*Crawler, error) {
 		Trace:               opts.Trace,
 		CookieConsentBypass: opts.CookieConsentBypass,
 		NoSandbox:           opts.NoSandbox,
+		Proxy:               opts.Proxy,
 	})
 	if err != nil {
 		return nil, err
@@ -239,7 +244,7 @@ func (c *Crawler) Crawl(URL string) error {
 				slog.String("action", action.String()),
 			)
 
-			if err := c.crawlFn(action, page); err != nil {
+			if err := c.crawlFn(ctx, action, page); err != nil {
 				if err == ErrNoCrawlingAction {
 					return nil
 				}
@@ -293,7 +298,7 @@ func (c *Crawler) Crawl(URL string) error {
 
 var ErrNoCrawlingAction = errors.New("no more actions to crawl")
 
-func (c *Crawler) crawlFn(action *types.Action, page *browser.BrowserPage) error {
+func (c *Crawler) crawlFn(ctx context.Context, action *types.Action, page *browser.BrowserPage) error {
 	defer func() {
 		c.launcher.PutBrowserToPool(page)
 	}()
@@ -333,6 +338,27 @@ func (c *Crawler) crawlFn(action *types.Action, page *browser.BrowserPage) error
 	}
 	if err := c.executeCrawlStateAction(action, page); err != nil {
 		return err
+	}
+
+	// Check for captcha pages after navigation and attempt to solve them.
+	// On success, wait for the page to settle and re-enter crawlFn so navigation
+	// discovery runs on the post-solve page instead of the captcha page.
+	if c.options.CaptchaHandler != nil {
+		html, htmlErr := page.HTML()
+		if htmlErr == nil {
+			handled, solveErr := c.options.CaptchaHandler.HandleIfCaptcha(ctx, page.Page, html)
+			if solveErr != nil {
+				gologger.Warning().Msgf("captcha solving failed: %s", solveErr)
+			}
+			if handled && solveErr == nil {
+				_ = page.WaitPageLoadHeurisitics()
+			}
+			if handled {
+				// Skip navigation discovery on captcha pages — the discovered
+				// links/forms belong to the captcha widget, not the real page.
+				return nil
+			}
+		}
 	}
 
 	pageState, err := newPageState(page, action)

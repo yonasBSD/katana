@@ -166,9 +166,12 @@ pipelines offering both headless and non-headless crawling.`)
 		flagSet.StringVarP(&options.FieldConfig, "field-config", "flc", "", "path to custom field configuration file"),
 		flagSet.StringVarP(&options.Strategy, "strategy", "s", "depth-first", "Visit strategy (depth-first, breadth-first)"),
 		flagSet.BoolVarP(&options.IgnoreQueryParams, "ignore-query-params", "iqp", false, "Ignore crawling same path with different query-param values"),
+		flagSet.BoolVarP(&options.FilterSimilar, "filter-similar", "fsu", false, "filter crawling of similar looking URLs (e.g., /users/123 and /users/456)"),
+		flagSet.IntVarP(&options.FilterSimilarThreshold, "filter-similar-threshold", "fst", 10, "number of distinct values before a path position is treated as parameter (default 10)"),
 		flagSet.BoolVarP(&options.TlsImpersonate, "tls-impersonate", "tlsi", false, "enable experimental client hello (ja3) tls randomization"),
 		flagSet.BoolVarP(&options.DisableRedirects, "disable-redirects", "dr", false, "disable following redirects (default false)"),
 		flagSet.BoolVarP(&options.PathClimb, "path-climb", "pc", false, "enable path climb (auto crawl parent paths)"),
+		flagSet.BoolVarP(&options.KnowledgeBase, "knowledge-base", "kb", false, "enable knowledge base classification"),
 	)
 
 	flagSet.CreateGroup("debug", "Debug",
@@ -191,6 +194,8 @@ pipelines offering both headless and non-headless crawling.`)
 		flagSet.BoolVarP(&options.XhrExtraction, "xhr-extraction", "xhr", false, "extract xhr request url,method in jsonl output"),
 		flagSet.IntVarP(&options.MaxFailureCount, "max-failure-count", "mfc", 10, "maximum number of consecutive action failures before stopping"),
 		flagSet.BoolVarP(&options.EnableDiagnostics, "enable-diagnostics", "ed", false, "enable diagnostics"),
+		flagSet.StringVarEnv(&options.CaptchaSolverProvider, "captcha-solver-provider", "csp", "", "CAPTCHA_SOLVER_PROVIDER", "captcha solver provider (e.g. capsolver)"),
+		flagSet.StringVarEnv(&options.CaptchaSolverAPIKey, "captcha-solver-key", "csk", "", "CAPTCHA_SOLVER_KEY", "captcha solver provider api key"),
 	)
 
 	flagSet.CreateGroup("scope", "Scope",
@@ -213,6 +218,7 @@ pipelines offering both headless and non-headless crawling.`)
 		flagSet.StringVarP(&options.OutputMatchCondition, "match-condition", "mdc", "", "match response with dsl based condition"),
 		flagSet.StringVarP(&options.OutputFilterCondition, "filter-condition", "fdc", "", "filter response with dsl based condition"),
 		flagSet.BoolVarP(&options.DisableUniqueFilter, "disable-unique-filter", "duf", false, "disable duplicate content filtering"),
+		flagSet.StringSliceVarP(&options.FilterPageType, "filter-page-type", "fpt", nil, "filter response with page type (e.g. error,captcha,parked)", goflags.CommaSeparatedStringSliceOptions),
 	)
 
 	flagSet.CreateGroup("ratelimit", "Rate-Limit",

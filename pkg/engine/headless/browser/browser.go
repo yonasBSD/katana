@@ -98,6 +98,10 @@ func (l *Launcher) launchBrowserWithDataDir(userDataDir string) (*rod.Browser, e
 		}
 	}
 
+	if l.opts.Proxy != "" {
+		chromeLauncher = chromeLauncher.Proxy(l.opts.Proxy)
+	}
+
 	if l.opts.NoSandbox {
 		chromeLauncher = chromeLauncher.NoSandbox(true)
 	}

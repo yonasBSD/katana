@@ -40,7 +40,7 @@
 
 ## Installation
 
-katana requires Go 1.24+ to install successfully. If you encounter any installation issues, we recommend trying with the latest available version of Go, as the minimum required version may have changed. Run the command below or download a pre-compiled binary from the [release page](https://github.com/projectdiscovery/katana/releases).
+katana requires Go 1.25+ to install successfully. If you encounter any installation issues, we recommend trying with the latest available version of Go, as the minimum required version may have changed. Run the command below or download a pre-compiled binary from the [release page](https://github.com/projectdiscovery/katana/releases).
 
 ```console
 CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
@@ -138,8 +138,11 @@ CONFIGURATION:
    -flc, -field-config string    path to custom field configuration file
    -s, -strategy string          Visit strategy (depth-first, breadth-first) (default "depth-first")
    -iqp, -ignore-query-params    Ignore crawling same path with different query-param values
+   -fsu, -filter-similar         filter crawling of similar looking URLs (e.g., /users/123 and /users/456)
+   -fst, -filter-similar-threshold int  number of distinct values before a path position is treated as parameter (default 10)
    -tlsi, -tls-impersonate       enable experimental client hello (ja3) tls randomization
    -dr, -disable-redirects       disable following redirects (default false)
+   -kb, -knowledge-base          enable knowledge base classification
 
 DEBUG:
    -health-check, -hc        run diagnostic check up
@@ -157,6 +160,8 @@ HEADLESS:
    -noi, -no-incognito               start headless chrome without incognito mode
    -cwu, -chrome-ws-url string       use chrome browser instance launched elsewhere with the debugger listening at this URL
    -xhr, -xhr-extraction             extract xhr request url,method in jsonl output
+   -csp, -captcha-solver-provider string  captcha solver provider (e.g. capsolver)
+   -csk, -captcha-solver-key string       captcha solver provider api key
 
 SCOPE:
    -cs, -crawl-scope string[]       in scope url regex to be followed by crawler
@@ -176,6 +181,7 @@ FILTER:
    -mdc, -match-condition string          match response with dsl based condition
    -fdc, -filter-condition string         filter response with dsl based condition
    -duf, -disable-unique-filter           disable duplicate content filtering
+   -fpt, -filter-page-type string[]      filter response with page type (e.g. error,captcha,parked)
 
 RATE-LIMIT:
    -c, -concurrency int          number of concurrent fetchers to use (default 10)
@@ -330,6 +336,8 @@ HEADLESS:
    -noi, -no-incognito               start headless chrome without incognito mode
    -cwu, -chrome-ws-url string       use chrome browser instance launched elsewhere with the debugger listening at this URL
    -xhr, -xhr-extraction             extract xhr requests
+   -csp, -captcha-solver-provider string  captcha solver provider (e.g. capsolver)
+   -csk, -captcha-solver-key string       captcha solver provider api key
 ```
 
 *`-no-sandbox`*
@@ -360,6 +368,34 @@ When crawling in headless mode, additional chrome options can be specified using
 katana -u https://tesla.com -headless -system-chrome -headless-options --disable-gpu,proxy-server=http://127.0.0.1:8080
 ```
 
+
+### Captcha Solving
+
+Katana supports automatic captcha detection and solving during headless crawling. When a captcha page is encountered, katana identifies the captcha provider, solves it via an external service, and continues crawling.
+
+Supported captcha types: **reCAPTCHA v2**, **reCAPTCHA v3**, **reCAPTCHA Enterprise**, **Cloudflare Turnstile**, **hCaptcha**
+
+*`-captcha-solver-provider`*
+----
+
+Option to specify the captcha solver provider. Currently supported: `capsolver`.
+
+*`-captcha-solver-key`*
+----
+
+API key for the captcha solver provider.
+
+```console
+katana -u https://example.com -headless -csp capsolver -csk YOUR_API_KEY
+```
+
+The provider and key can also be set via environment variables:
+
+```console
+export CAPTCHA_SOLVER_PROVIDER=capsolver
+export CAPTCHA_SOLVER_KEY=YOUR_API_KEY
+katana -u https://example.com -headless
+```
 
 ## Scope Control
 
@@ -509,6 +545,21 @@ Automatic form filling is experimental feature.
 katana -u https://tesla.com -aff
 ```
 
+*`-filter-similar`*
+----
+
+Option to filter crawling of similar looking URLs by normalizing variable path segments. This detects IDs, UUIDs, hashes, dates, and other dynamic values, and also learns repeating patterns at runtime. For example, `/users/123` and `/users/456` are treated as the same endpoint.
+
+```
+katana -u https://tesla.com -fsu
+```
+
+The promotion threshold (how many distinct values at a path position before it's treated as a parameter) can be tuned with `-fst`. Lower values are more aggressive (fewer URLs crawled), higher values are more permissive. Default is `10`.
+
+```
+katana -u https://tesla.com -fsu -fst 5
+```
+
 ## Authenticated Crawling
 
 Authenticated crawling involves including custom headers or cookies in HTTP requests to access protected resources. These headers provide authentication or authorization information, allowing you to crawl authenticated content / endpoint. You can specify headers directly in the command line or provide them as a file with katana to perform authenticated crawling.
@@ -564,6 +615,9 @@ CONFIGURATION:
    -fc, -form-config string      path to custom form configuration file
    -flc, -field-config string    path to custom field configuration file
    -s, -strategy string          Visit strategy (depth-first, breadth-first) (default "depth-first")
+   -iqp, -ignore-query-params    Ignore crawling same path with different query-param values
+   -fsu, -filter-similar         filter crawling of similar looking URLs (e.g., /users/123 and /users/456)
+   -fst, -filter-similar-threshold int  number of distinct values before a path position is treated as parameter (default 10)
 ```
 
 ### Connecting to Active Browser Session

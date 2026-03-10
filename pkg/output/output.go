@@ -64,6 +64,7 @@ type StandardWriter struct {
 	outputMatchCondition  string
 	outputFilterCondition string
 	excludeOutputFields   []string
+	filterPageType        []string
 }
 
 // New returns a new output writer instance
@@ -85,6 +86,7 @@ func New(options Options) (Writer, error) {
 		outputMatchCondition:  options.OutputMatchCondition,
 		outputFilterCondition: options.OutputFilterCondition,
 		excludeOutputFields:   options.ExcludeOutputFields,
+		filterPageType:        options.FilterPageType,
 	}
 
 	if options.StoreFieldDir != "" {
@@ -180,6 +182,15 @@ func (w *StandardWriter) Write(result *Result) error {
 	}
 	if w.filterOutput(result) {
 		return errors.New("result is filtered out")
+	}
+	if len(w.filterPageType) > 0 && result.Response != nil && result.Response.KnowledgeBase != nil {
+		if pageType, ok := result.Response.KnowledgeBase["PageType"].(string); ok {
+			for _, ft := range w.filterPageType {
+				if strings.EqualFold(pageType, ft) {
+					return errors.New("result filtered by page type")
+				}
+			}
+		}
 	}
 	var data []byte
 	var err error

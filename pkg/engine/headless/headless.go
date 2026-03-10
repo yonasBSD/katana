@@ -7,11 +7,15 @@ import (
 	"time"
 
 	"github.com/lmittmann/tint"
+	"github.com/projectdiscovery/gologger"
 	"github.com/projectdiscovery/katana/pkg/engine/headless/browser"
+	"github.com/projectdiscovery/katana/pkg/engine/headless/captcha"
+	_ "github.com/projectdiscovery/katana/pkg/engine/headless/captcha/capsolver"
 	"github.com/projectdiscovery/katana/pkg/engine/headless/crawler"
 	"github.com/projectdiscovery/katana/pkg/engine/parser"
 	"github.com/projectdiscovery/katana/pkg/output"
 	"github.com/projectdiscovery/katana/pkg/types"
+	"github.com/projectdiscovery/katana/pkg/utils"
 	mapsutil "github.com/projectdiscovery/utils/maps"
 )
 
@@ -20,6 +24,7 @@ type Headless struct {
 	options *types.CrawlerOptions
 
 	deduplicator *mapsutil.SyncLockMap[string, struct{}]
+	pathTrie     *utils.PathTrie
 
 	debugger *CrawlDebugger
 }
@@ -33,6 +38,9 @@ func New(options *types.CrawlerOptions) (*Headless, error) {
 		options: options,
 
 		deduplicator: mapsutil.NewSyncLockMap[string, struct{}](),
+	}
+	if options.Options.FilterSimilar {
+		headless.pathTrie = utils.NewPathTrie(options.Options.FilterSimilarThreshold)
 	}
 
 	// Show crawl debugger if verbose is enabled
@@ -107,6 +115,7 @@ func (h *Headless) Crawl(URL string) error {
 		MaxCrawlDuration:  h.options.Options.CrawlDuration,
 		MaxFailureCount:   h.options.Options.MaxFailureCount,
 		NoSandbox:         h.options.Options.HeadlessNoSandbox,
+		Proxy:             h.options.Options.Proxy,
 		MaxBrowsers:       1,
 		PageMaxTimeout:    30 * time.Second,
 		ScopeValidator:    scopeValidator,
@@ -134,6 +143,7 @@ func (h *Headless) Crawl(URL string) error {
 			}
 
 			if rr.Response != nil {
+				rr.Response.KnowledgeBase = h.options.ClassifyPage(rr.Response.Body)
 				rr.Response.Raw = ""
 				rr.Response.Body = ""
 			}
@@ -148,6 +158,16 @@ func (h *Headless) Crawl(URL string) error {
 		EnableDiagnostics:   h.options.Options.EnableDiagnostics,
 		Trace:               h.options.Options.EnableDiagnostics,
 		CookieConsentBypass: true,
+	}
+
+	if provider := h.options.Options.CaptchaSolverProvider; provider != "" {
+		gologger.Debug().Msgf("captcha solver enabled: provider=%s", provider)
+		handler, err := captcha.NewHandler(provider, h.options.Options.CaptchaSolverAPIKey)
+		if err != nil {
+			gologger.Warning().Msgf("captcha handler init failed: %s", err)
+		} else {
+			crawlOpts.CaptchaHandler = handler
+		}
 	}
 
 	// TODO: Make the crawling multi-threaded. Right now concurrency is hardcoded to 1.
@@ -177,10 +197,14 @@ func (h *Headless) performAdditionalAnalysis(rr *output.Result) []*output.Result
 
 	navigationRequests := make([]*output.Result, 0)
 	for _, resp := range newNavigations {
-		if _, ok := h.deduplicator.Get(resp.URL); ok {
+		dedupKey := resp.URL
+		if h.options.Options.FilterSimilar {
+			dedupKey = utils.FingerprintURL(dedupKey, h.pathTrie)
+		}
+		if _, ok := h.deduplicator.Get(dedupKey); ok {
 			continue
 		}
-		if err := h.deduplicator.Set(resp.URL, struct{}{}); err != nil {
+		if err := h.deduplicator.Set(dedupKey, struct{}{}); err != nil {
 			h.logger.Debug("deduplicator set failed",
 				slog.String("url", resp.URL),
 				slog.String("error", err.Error()),
